@@ -7,8 +7,8 @@ function createWindow() {
         width: 900,
         height: 900,
         // Make window transparent
-        frame: false,      // No frame to give overlay feel
-        alwaysOnTop: true, // Always on top of game window
+        // frame: false,      // No frame to give overlay feel
+        // alwaysOnTop: true, // Always on top of game window
     });
 
     win.loadURL(`file://${path.join(__dirname, 'public/index.html')}`); // Load React App

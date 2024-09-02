@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { request, gql } from 'graphql-request'
+import { recognizeText } from '../utils/ocrHelper';
 
 const ItemOverlay = () => {
     const [itemData, setItemData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [showInput, setShowInput] = useState(true);
 
     const fetchItemData = async (itemName) => {
         setLoading(true);
@@ -24,27 +26,54 @@ const ItemOverlay = () => {
         }
       `;
 
-      const variables = { name: itemName};
+      const variables = { name: itemName };
 
       try {
         const data = await request(endpoint, query, variables);
+        console.log(data.items[0]);
         setItemData(data.items[0]); // Get the first item in the result
       } catch (err) {
         console.error('API Error:', err);
         setError('Item not found or API error');
       } finally {
         setLoading(false);
+        setShowInput(false);
       }
     };
 
-    useEffect(() => {
-        fetchItemData('Red Rebel ice pick');
-    }, []);
+    const handleImageSelect = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
 
-    if (loading) return <div>Loading item data...</div>;
-    if (error) return <div>{error}</div>;
+      // Convert image file to data URL
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const imageUrl = e.target.result;
+        const recognizedText = await recognizeText(imageUrl);
 
-    return itemData ? (
+        if (recognizedText) {
+          console.log('Recognised Text:', recognizedText.text.trim());
+          fetchItemData(recognizedText.text.trim());
+        } else {
+          setError('Failed to recognise text');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+     // Reset state to allow new image selection
+    const handleNewSearch = () => {
+      setItemData(null);
+      setError(null);
+      setShowInput(true);
+    };
+    
+  return (
+    <div>
+      {showInput && <input type="file" accept="image/*" onChange={handleImageSelect} />} {/* File input to select an image */}
+      {loading && <div>Loading item data...</div>}
+      {error && <div>{error}</div>}
+      {itemData && (
         <div>
           <h2>{itemData.name} ({itemData.shortName})</h2>
           <p>Base Price: {itemData.basePrice}</p>
@@ -54,9 +83,11 @@ const ItemOverlay = () => {
             <img src={itemData.iconLink} alt={itemData.name} style={{ width: '50px', height: '50px' }} />
           </div>
         </div>
-      ) : (
-        <div>No item data</div>
-      );
+      )}
+      <button onClick={handleNewSearch}>Select Another Image</button>
+    </div>
+  );
 };
+
 
 export default ItemOverlay;
