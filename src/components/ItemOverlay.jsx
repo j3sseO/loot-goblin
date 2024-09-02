@@ -1,12 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { request, gql } from 'graphql-request'
-import { recognizeText } from '../utils/ocrHelper';
 
 const ItemOverlay = () => {
     const [itemData, setItemData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showInput, setShowInput] = useState(true);
+
+    const handleCapture = async (imagePath) => {
+      setLoading(true);
+      try {
+        const itemName = await window.electron.ipcRenderer.invoke('process-image', imagePath);
+
+        if (itemName) {
+          fetchItemData(itemName);
+        } else {
+          setError('Failed to recognise text');
+        }
+      } catch (err) {
+          console.error('Error during OCR process:', err);
+          setError('Error during OCR process');
+      }
+      setLoading(false);
+    };
 
     const fetchItemData = async (itemName) => {
         setLoading(true);
@@ -49,14 +65,7 @@ const ItemOverlay = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const imageUrl = e.target.result;
-        const recognizedText = await recognizeText(imageUrl);
-
-        if (recognizedText) {
-          console.log('Recognised Text:', recognizedText.text.trim());
-          fetchItemData(recognizedText.text.trim());
-        } else {
-          setError('Failed to recognise text');
-        }
+        const recognizedText = handleCapture(imageUrl);
       };
       reader.readAsDataURL(file);
     }
